@@ -6,9 +6,69 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+
+  <style>
+    table {
+  font-family: Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 400px;
+}
+
+table td, #customers th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+table tr:nth-child(even){background-color: #f2f2f2;}
+
+table tr:hover {background-color: #ddd;}
+
+table th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #04AA6D;
+  color: white;
+}
+
+  </style>
+
 </head>
 
 <body>
+  <script>
+    var tabulate = function (data,columns) {
+  var table = d3.select('body').append('table')
+	var thead = table.append('thead')
+	var tbody = table.append('tbody')
+
+	thead.append('tr')
+	  .selectAll('th')
+	    .data(columns)
+	    .enter()
+	  .append('th')
+	    .text(function (d) { return d })
+
+	var rows = tbody.selectAll('tr')
+	    .data(data)
+	    .enter()
+	  .append('tr')
+
+	var cells = rows.selectAll('td')
+	    .data(function(row) {
+	    	return columns.map(function (column) {
+	    		return { column: column, value: row[column] }
+	      })
+      })
+      .enter()
+    .append('td')
+      .text(function (d) { return d.value })
+
+  return table;
+}
+
+  </script>
+
   <script>
 
     //load api compoenents. using # instead of / to avoid github pages 404
@@ -31,7 +91,7 @@
       console.log(data);
       return data
 
-      //we select the country and indicator from the url and construct teh dictionary D
+      //we select the country and indicator from the url and construct the dictionary D
     }).then(function (data) {
       data.forEach(function (d) {
         if (Object.keys(D).indexOf(d.country) < 0) {
@@ -51,7 +111,6 @@
         document.body.innerHTML = "Indicator not found";
       } else {
         timeSeries = D[country][indicator];
-        console.log(timeSeries);
       }
 
       //country-specific api calls
@@ -125,7 +184,68 @@
               M.push({ date: e.slice(0, 4) + '-' + e.slice(4, 6) + '-' + '01', value: d[i].VALUE['$'] })
             }
           }
-          console.log(M)
+          else if (country == 'idn'){
+            //1. Readable labels for vervar, var, turvar, tahun, turtahun are returned in bps_data response
+            label_keys = ['vervar', 'var', 'turvar', 'tahun', 'turtahun']
+            labels = {}
+            for (key of label_keys){
+            labels[key] = {}
+            for (item of data[key]){
+                labels[key][item.val] = item.label
+            }
+            // 2. get all posible keys - there may be a more elegant way of doing this but parsing keys rather than matching is difficult because of ambiguity due to non zero filled values
+            //    Is there a better way to do this? e.g. a ES6 ittertools alternative?
+            let possibleKeys = {};
+            for (let vervar in labels['vervar']) { // this isn't quite as inneficient as it looks because only 2 or 3 values for most of these
+                for (let variable in labels['var']) {
+                    for (let turvar in labels['turvar']) {
+                        for (let tahun in labels['tahun']) {
+                            for (let turtahun in labels['turtahun']) {                        
+                                let key = "" + vervar + variable + turvar + tahun + turtahun;
+                                possibleKeys[key] = {
+                                    "year": labels['tahun'][tahun],
+                                    "subyear": labels['turtahun'][turtahun],
+                                    "subvariable": labels['turvar'][turvar],
+                                    "variable": labels['var'][variable],
+                                    "vertical_variable": labels['vervar'][vervar]
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            // 3. Parse the data by matching the keys to the possible keys
+            M = []
+            for (let key in data.datacontent) {
+              if (key in possibleKeys) {
+                  let datum_labels = possibleKeys[key];
+                  
+                  parsed_datum = {}
+                  parsed_datum['value'] = data.datacontent[key];
+
+                  // parse the date using the year and subyear
+                  subyear_lookups = { "January": "01-01", "February": "02-01", "March": "03-01", "April": "04-01", "May": "05-01", "June": "06-01", "July": "07-01", "August": "08-01", "September": "09-01", "October": "10-01", "November": "11-01", "December": "12-01", "Quarter I": "01-01", "Quarter 1": "01-01", "Quarter 2": "04-01", "Quarter II": "04-01", "Quarter III": "07-01", "Quarter 3": "07-01", "Quarter IV": "10-01","Quarter 4": "10-01","Semester 1 (March)" : "03-01", "Semester 2 (September)" : "09-01", "Annual": "01-01", "Annually" : "01-01", "Yearly" : "01-01"} // TODO: lazy
+                  parsed_datum['date'] = datum_labels.year + "-" + subyear_lookups[datum_labels.subyear]
+
+                  //parsed_datum['series'] = datum_labels.subvariable
+                  //parsed_datum['variable'] = datum_labels.variable
+                  parsed_datum['year'] = datum_labels.year
+                  parsed_datum['subyear'] = datum_labels.subyear
+                  //parsed_datum['vertical_variable'] = datum_labels.vertical_variable
+
+
+                  M.push(parsed_datum)
+              }
+            }
+
+
+
+
+    }
+
+
+
+          }
         })
 
       //load a master vegalite spec and modify it to the country and indicator
@@ -161,7 +281,9 @@
               '#view',
               vlSpec
             );
-            document.querySelector('#code').innerHTML = '<code><b>ECO API</b>: <a href="' + window.location + '">' + window.location + '</a><br><br><b>Original API</b>: <a href="' + timeSeries.API_full + '">' + timeSeries.API_full + '"</a><br><br>' + JSON.stringify(M) + '</code>'
+            d3.selectAll("table").remove();
+            tabulate(M, ["date", "value", "year", "subyear"], "#table");
+            //document.querySelector('#code').innerHTML = '<code><b>ECO API</b>: <a href="' + window.location + '">' + window.location + '</a><br><br><b>Original API</b>: <a href="' + timeSeries.API_full + '">' + timeSeries.API_full + '"</a><br><br>' + JSON.stringify(M) + '</code>'
           });
       }, 500)
     }
