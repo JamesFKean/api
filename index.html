@@ -31,6 +31,10 @@ table th {
   color: white;
 }
 
+code {
+  width: 50%;
+  float: left;
+}
   </style>
 
 </head>
@@ -237,6 +241,16 @@ table th {
                   M.push(parsed_datum)
               }
             }
+            // 4. Fixing Issues with Annual/Sub-Annual Data by dropping Annual data when a year has sub-annual data
+            const uniqueYears = [...new Set(M.map(item => item.year))];
+            for (let year of uniqueYears) {
+              let subAnnualData = M.filter(item => item.year == year && item.subyear != "Annual")
+              if (subAnnualData.length > 0) {
+                annual_keys = ['Annually', 'Annual', 'Yearly']
+                // if there is sub-annual data, remove the annual data
+                M = M.filter(item => item.year != year || !annual_keys.includes(item.subyear))
+              }
+            }
 
 
 
@@ -283,7 +297,7 @@ table th {
             );
             d3.selectAll("table").remove();
             tabulate(M, ["date", "value", "year", "subyear"], "#table");
-            //document.querySelector('#code').innerHTML = '<code><b>ECO API</b>: <a href="' + window.location + '">' + window.location + '</a><br><br><b>Original API</b>: <a href="' + timeSeries.API_full + '">' + timeSeries.API_full + '"</a><br><br>' + JSON.stringify(M) + '</code>'
+            document.querySelector('#code').innerHTML = '<code><b>ECO API</b>: <a href="' + window.location + '">' + window.location + '</a><br><br><b>Original API</b>: <a href="' + timeSeries.API_full + '">' + timeSeries.API_full + '"</a><br><br>' + JSON.stringify(M) + '</code>'
           });
       }, 500)
     }
