@@ -9,67 +9,72 @@
 
   <style>
     table {
-  font-family: Arial, Helvetica, sans-serif;
-  border-collapse: collapse;
-  width: 400px;
-}
+      font-family: Arial, Helvetica, sans-serif;
+      border-collapse: collapse;
+      width: 400px;
+    }
 
-table td, #customers th {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
+    table td,
+    #customers th {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
 
-table tr:nth-child(even){background-color: #f2f2f2;}
+    table tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
 
-table tr:hover {background-color: #ddd;}
+    table tr:hover {
+      background-color: #ddd;
+    }
 
-table th {
-  padding-top: 12px;
-  padding-bottom: 12px;
-  text-align: left;
-  background-color: #04AA6D;
-  color: white;
-}
+    table th {
+      padding-top: 12px;
+      padding-bottom: 12px;
+      text-align: left;
+      background-color: #04AA6D;
+      color: white;
+    }
 
-code {
-  width: 50%;
-  float: left;
-}
+    code {
+      width: 50%;
+      float: left;
+    }
   </style>
 
 </head>
 
 <body>
   <script>
-    var tabulate = function (data,columns) {
-  var table = d3.select('body').append('table')
-	var thead = table.append('thead')
-	var tbody = table.append('tbody')
+    var tabulate = function (data, columns) {
+      var table = d3.select('body').append('table')
+      var thead = table.append('thead')
+      var tbody = table.append('tbody')
 
-	thead.append('tr')
-	  .selectAll('th')
-	    .data(columns)
-	    .enter()
-	  .append('th')
-	    .text(function (d) { return d })
+      thead.append('tr')
+        .selectAll('th')
+        .data(columns)
+        .enter()
+        .append('th')
+        .text(function (d) { return d })
 
-	var rows = tbody.selectAll('tr')
-	    .data(data)
-	    .enter()
-	  .append('tr')
+      var rows = tbody.selectAll('tr')
+        .data(data)
+        .enter()
+        .append('tr')
 
-	var cells = rows.selectAll('td')
-	    .data(function(row) {
-	    	return columns.map(function (column) {
-	    		return { column: column, value: row[column] }
-	      })
-      })
-      .enter()
-    .append('td')
-      .text(function (d) { return d.value })
+      var cells = rows.selectAll('td')
+        .data(function (row) {
+          return columns.map(function (column) {
+            return { column: column, value: row[column] }
+          })
+        })
+        .enter()
+        .append('td')
+        .text(function (d) { return d.value })
 
-  return table;
-}
+      return table;
+    }
 
   </script>
 
@@ -85,7 +90,7 @@ code {
     var M = [];
 
     //ths is the main function that loads the metadata directly from github
-    d3.csv("./metadata-full.csv").then(function (data) {
+    d3.csv("./metadata-staging.csv").then(function (data) {
       data = data.filter(function (d) {
         if (Object.keys(d).indexOf("") > -1) {
           delete d[""];
@@ -107,6 +112,8 @@ code {
 
     })
 
+    raw_data = null;
+
     //this function create the api call using the csv metafile
     function load(country, indicator) {
       if (Object.keys(D).indexOf(country) < 0) {
@@ -121,6 +128,7 @@ code {
       d3.json(timeSeries.API_full)
         .then(function (data) {
           // console.log(data, timeSeries.date, country)
+          raw_data = data;
 
           if (country == 'gbr') {
             const keysToKeep = ['date', 'value'];
@@ -188,47 +196,47 @@ code {
               M.push({ date: e.slice(0, 4) + '-' + e.slice(4, 6) + '-' + '01', value: d[i].VALUE['$'] })
             }
           }
-          else if (country == 'idn'){
+          else if (country == 'idn') {
             //1. Readable labels for vervar, var, turvar, tahun, turtahun are returned in bps_data response
             label_keys = ['vervar', 'var', 'turvar', 'tahun', 'turtahun']
             labels = {}
-            for (key of label_keys){
-            labels[key] = {}
-            for (item of data[key]){
+            for (key of label_keys) {
+              labels[key] = {}
+              for (item of data[key]) {
                 labels[key][item.val] = item.label
-            }
-            // 2. get all posible keys - there may be a more elegant way of doing this but parsing keys rather than matching is difficult because of ambiguity due to non zero filled values
-            //    Is there a better way to do this? e.g. a ES6 ittertools alternative?
-            let possibleKeys = {};
-            for (let vervar in labels['vervar']) { // this isn't quite as inneficient as it looks because only 2 or 3 values for most of these
+              }
+              // 2. get all posible keys - there may be a more elegant way of doing this but parsing keys rather than matching is difficult because of ambiguity due to non zero filled values
+              //    Is there a better way to do this? e.g. a ES6 ittertools alternative?
+              let possibleKeys = {};
+              for (let vervar in labels['vervar']) { // this isn't quite as inneficient as it looks because only 2 or 3 values for most of these
                 for (let variable in labels['var']) {
-                    for (let turvar in labels['turvar']) {
-                        for (let tahun in labels['tahun']) {
-                            for (let turtahun in labels['turtahun']) {                        
-                                let key = "" + vervar + variable + turvar + tahun + turtahun;
-                                possibleKeys[key] = {
-                                    "year": labels['tahun'][tahun],
-                                    "subyear": labels['turtahun'][turtahun],
-                                    "subvariable": labels['turvar'][turvar],
-                                    "variable": labels['var'][variable],
-                                    "vertical_variable": labels['vervar'][vervar]
-                                };
-                            }
-                        }
+                  for (let turvar in labels['turvar']) {
+                    for (let tahun in labels['tahun']) {
+                      for (let turtahun in labels['turtahun']) {
+                        let key = "" + vervar + variable + turvar + tahun + turtahun;
+                        possibleKeys[key] = {
+                          "year": labels['tahun'][tahun],
+                          "subyear": labels['turtahun'][turtahun],
+                          "subvariable": labels['turvar'][turvar],
+                          "variable": labels['var'][variable],
+                          "vertical_variable": labels['vervar'][vervar]
+                        };
+                      }
                     }
+                  }
                 }
-            }
-            // 3. Parse the data by matching the keys to the possible keys
-            M = []
-            for (let key in data.datacontent) {
-              if (key in possibleKeys) {
+              }
+              // 3. Parse the data by matching the keys to the possible keys
+              M = []
+              for (let key in data.datacontent) {
+                if (key in possibleKeys) {
                   let datum_labels = possibleKeys[key];
-                  
+
                   parsed_datum = {}
                   parsed_datum['value'] = data.datacontent[key];
 
                   // parse the date using the year and subyear
-                  subyear_lookups = { "January": "01-01", "February": "02-01", "March": "03-01", "April": "04-01", "May": "05-01", "June": "06-01", "July": "07-01", "August": "08-01", "September": "09-01", "October": "10-01", "November": "11-01", "December": "12-01", "Quarter I": "01-01", "Quarter 1": "01-01", "Quarter 2": "04-01", "Quarter II": "04-01", "Quarter III": "07-01", "Quarter 3": "07-01", "Quarter IV": "10-01","Quarter 4": "10-01","Semester 1 (March)" : "03-01", "Semester 2 (September)" : "09-01", "Annual": "01-01", "Annually" : "01-01", "Yearly" : "01-01"} // TODO: lazy
+                  subyear_lookups = { "January": "01-01", "February": "02-01", "March": "03-01", "April": "04-01", "May": "05-01", "June": "06-01", "July": "07-01", "August": "08-01", "September": "09-01", "October": "10-01", "November": "11-01", "December": "12-01", "Quarter I": "01-01", "Quarter 1": "01-01", "Quarter 2": "04-01", "Quarter II": "04-01", "Quarter III": "07-01", "Quarter 3": "07-01", "Quarter IV": "10-01", "Quarter 4": "10-01", "Semester 1 (March)": "03-01", "Semester 2 (September)": "09-01", "Annual": "01-01", "Annually": "01-01", "Yearly": "01-01" } // TODO: lazy
                   parsed_datum['date'] = datum_labels.year + "-" + subyear_lookups[datum_labels.subyear]
 
                   //parsed_datum['series'] = datum_labels.subvariable
@@ -239,31 +247,36 @@ code {
 
 
                   M.push(parsed_datum)
+                }
               }
-            }
-            // 4. Fixing Issues with Annual/Sub-Annual Data by dropping Annual data when a year has sub-annual data
-            const uniqueYears = [...new Set(M.map(item => item.year))];
-            for (let year of uniqueYears) {
-              let subAnnualData = M.filter(item => item.year == year && item.subyear != "Annual")
-              if (subAnnualData.length > 0) {
-                annual_keys = ['Annually', 'Annual', 'Yearly']
-                // if there is sub-annual data, remove the annual data
-                M = M.filter(item => item.year != year || !annual_keys.includes(item.subyear))
+              // 4. Fixing Issues with Annual/Sub-Annual Data by dropping Annual data when a year has sub-annual data
+              const uniqueYears = [...new Set(M.map(item => item.year))];
+              for (let year of uniqueYears) {
+                let subAnnualData = M.filter(item => item.year == year && item.subyear != "Annual")
+                if (subAnnualData.length > 0) {
+                  annual_keys = ['Annually', 'Annual', 'Yearly']
+                  // if there is sub-annual data, remove the annual data
+                  M = M.filter(item => item.year != year || !annual_keys.includes(item.subyear))
+                }
               }
+
+
+
+
             }
-
-
-
-
-    }
-
-
-
+          } else if (country == "ind"){
+            console.log(`timeSeries.date_keys: ${timeSeries.date_keys}, timeSeries.value_keys: ${timeSeries.value_keys}, timeSeries.filters: ${timeSeries.filter}, timeSeries.orient: ${timeSeries.orient}`)
+            const date_keys = JSON.parse(timeSeries.date_keys)
+            const value_keys = JSON.parse(timeSeries.value_keys)
+            const filter = JSON.parse(timeSeries.filter)
+            M = parse_india(data, date_keys, value_keys, filter, timeSeries.orient);
           }
         })
 
       //load a master vegalite spec and modify it to the country and indicator
       setTimeout(function () {
+        d3.selectAll("table").remove();
+        document.querySelector('#code').innerHTML = "";
         d3.json("./default_vega_lite_spec.json")
           .then(function (vlSpec) {
             vlSpec.data.values = M;
@@ -295,11 +308,162 @@ code {
               '#view',
               vlSpec
             );
-            d3.selectAll("table").remove();
+            
             tabulate(M, ["date", "value", "year", "subyear"], "#table");
             document.querySelector('#code').innerHTML = '<code><b>ECO API</b>: <a href="' + window.location + '">' + window.location + '</a><br><br><b>Original API</b>: <a href="' + timeSeries.API_full + '">' + timeSeries.API_full + '"</a><br><br>' + JSON.stringify(M) + '</code>'
           });
       }, 500)
+    }
+
+    function parse_india(data, dateForms = [], valueForms = [], filters = [], orient = 'wide') {
+
+      const records = data.records;
+      let parsedRows = [];
+      let temp_rows = [];
+
+      console.log(dateForms);
+
+      for (const record of records) {
+
+        // first iterate over the filters, if any don't match, skip this record
+        let skip = false;
+        for (const filter of filters) {
+          if (!(filter[0] in record) || record[filter[0]] !== filter[1]) {
+            skip = true;
+            console.log(`skipping record because ${filter[0]} is not ${filter[1]}`)
+            break;
+          }
+        }
+        if (skip) { continue }
+
+        // find the date fields
+        const date_fields = find_matching_fields(record, dateForms);
+
+        // find the value fields
+        const value_fields = find_matching_fields(record, valueForms);
+
+        if (orient === 'wide') {
+          // if wide, we're constructing lots of dates from the date fields where each item fully describes a date
+          for (const dateField of date_fields) {
+            let year, date, quarter, valueField;
+            // parse according to its format
+            if (/^\d{4}_\d{2}___q[1-4]$/.test(dateField.value)) {
+              year = dateField.value.split('_')[0];
+              date = new Date(year, 3, 1); // Financial year starts on 1st April
+              quarter = dateField.value.substring(dateField.value.length - 1);
+              date.setMonth(date.getMonth() + (quarter - 1) * 3);
+            } else {
+              throw `Unrecognised date format: ${dateField.value}`;
+            }
+            valueField = value_fields.find(field => field.key === dateField.key);
+            parsedRows.push({
+              'date': date,
+              'value': valueField.value
+            });
+          }
+        } else if (orient === 'long') {
+          // if long, we're constructing a single date from the date fields where each item partially describes a date
+          let dateAttributes = {}; // accumulate the different bits of the date
+
+          for (const dateField of date_fields) {
+            let dateSubs;
+            // parse according to format
+            if (dateField.key === "year") {
+              dateAttributes['year'] = dateField.value;
+            } else if (dateField.key === "month") {
+              dateSubs = {
+                'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
+                'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11,
+                'December': 12, 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'Jun': 6,
+                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+              };
+              if (dateField.value in dateSubs) {
+                dateAttributes['month'] = dateSubs[dateField.value];
+              } else if (!isNaN(dateField.value)) {
+                dateAttributes['month'] = parseInt(dateField.value);
+              }
+            }
+
+            dateAttributes = { ...{ 'month': 1, 'day': 1 }, ...dateAttributes };
+            const date = new Date(dateAttributes['year'], dateAttributes['month'] - 1, dateAttributes['day']);
+
+            parsedRows.push({
+              'date': date,
+              'value': value_fields[0].value
+            });
+          }
+        } else {
+          throw `Unrecognised orient: ${orient}`;
+        }
+      }
+
+      // remove duplicate dates
+      parsedRows = parsedRows.filter((row, index, self) =>
+        index === self.findIndex((r) => (
+          r.date.getTime() === row.date.getTime()
+        ))
+      )
+
+      console.log(`parsed rows: ${parsedRows.length}`);
+      return parsedRows;
+    }
+
+    function find_matching_fields(record, validForms) {
+      // For India
+      // returns {key : value} pairs for each field in record that matches a form (either regex or field name) from validForms
+      // these forms are either regex or field names
+
+      matching_fields = []
+
+      // loop over the fields of the row
+      for (key in record) {
+
+        for (form of validForms) {
+          //console.log(`dateForm: ${dateForm}, key: ${key} `)
+          // if the dateForm is wrapped in slashes, it's a regex
+          if (form[0] == '/' && form[form.length - 1] == '/') {
+            // regex - get value from record using regex
+            const regex = new RegExp(form.slice(1, form.length - 1))
+            const match = regex.exec(key)
+            if (match) {
+              // if the regex is non-caputuring, we want to return the value - match will be length 1 
+              if (match.length == 1) { // a more robust way of checking here would be to use a new regex to check for capturing groups
+                matching_fields.push({
+                  'key': key,
+                  'value': record[key],
+                  'form': form
+                })
+
+              } else {
+                // otherwise, we want to return the first capture group
+                matching_fields.push(
+                  {
+                    'key': key,
+                    'value': match[1],
+                    'form': form
+                  }
+                )
+
+              }
+            }
+          } else {
+            if (key == form) {
+              // not regex - get value from record using key
+              // otherwise, we want to return the first capture group
+              matching_fields.push(
+                {
+                  'key': key,
+                  'value': record[key],
+                  'form': form
+                }
+              )
+            }
+          }
+        }
+      }
+
+      return matching_fields
+
     }
 
     //add the dropdowns
