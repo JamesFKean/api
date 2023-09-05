@@ -271,8 +271,25 @@
             const filter = JSON.parse(timeSeries.filter)
             M = parse_india(data, date_keys, value_keys, filter, timeSeries.orient);
           }
-        })
+          else if (country =="mex") {
+            M = data.series.OBSERVATIONS.map( d => {
+              let year = d.TIME_PERIOD.slice(0, 4);
+              let month = (d.TIME_PERIOD.length > 4) ? d.TIME_PERIOD.slice(5, 7): "01";
 
+              const year_month =  `${year}-${month}-01`;
+
+              return {
+                date: year_month,
+                value: d.OBS_VALUE,
+                year,
+                subyear: month
+                }
+              
+              }
+            )
+          }
+        })
+       
       //load a master vegalite spec and modify it to the country and indicator
       setTimeout(function () {
         d3.selectAll("table").remove();
