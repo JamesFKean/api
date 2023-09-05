@@ -289,6 +289,22 @@
               }
             )
           }
+          else if (country == "bra") {M = data[0].map( d=>
+            {
+              let year = d.data.slice(6, 10);
+              let month = d.data.slice(3, 5);
+
+              const year_month = `${year}-${month}-01`;
+              
+              return {
+                date: year_month,
+                value: d.valor,
+                year,
+                subyear: month
+              }
+            }
+            )
+          }
         })
        
       //load a master vegalite spec and modify it to the country and indicator
