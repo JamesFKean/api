@@ -272,12 +272,13 @@
             M = parse_india(data, date_keys, value_keys, filter, timeSeries.orient);
           }
           else if (country =="mex") {
-            M = data.series.OBSERVATIONS.map( d => {
+            M = data.Series[0]["OBSERVATIONS"].map( d => {
               let year = d.TIME_PERIOD.slice(0, 4);
               let month = (d.TIME_PERIOD.length > 4) ? d.TIME_PERIOD.slice(5, 7): "01";
-
+              //Adding in a year month variable that vegalite can read
               const year_month =  `${year}-${month}-01`;
-
+              
+              //Creating the dict that can be passed by vegalite
               return {
                 date: year_month,
                 value: d.OBS_VALUE,
