@@ -271,9 +271,43 @@
             const filter = JSON.parse(timeSeries.filter)
             M = parse_india(data, date_keys, value_keys, filter, timeSeries.orient);
           }
-        })
+          else if (country =="mex") {
+            M = data.Series[0]["OBSERVATIONS"].map( d => {
+              let year = d.TIME_PERIOD.slice(0, 4);
+              let month = (d.TIME_PERIOD.length > 4) ? d.TIME_PERIOD.slice(5, 7): "01";
+              //Adding in a year month variable that vegalite can read
+              const year_month =  `${year}-${month}-01`;
+              
+              //Creating the dict that can be passed by vegalite
+              return {
+                date: year_month,
+                value: d.OBS_VALUE,
+                year,
+                subyear: month
+                }
+              
+              }
+            )
+          }
+          else if (country == "bra") {M = data.map( d=>
+            {
+              let year = d.data.slice(6, 10);
+              let month = d.data.slice(3, 5);
 
-      //load a masterr vegalite spec and modify it to the country and indicator
+              const year_month = `${year}-${month}-01`;
+              
+              return {
+                date: year_month,
+                value: d.valor,
+                year,
+                subyear: month
+              }
+            }
+            )
+          }
+        })
+       
+      //load a master vegalite spec and modify it to the country and indicator
       setTimeout(function () {
         d3.selectAll("table").remove();
         document.querySelector('#code').innerHTML = "";
